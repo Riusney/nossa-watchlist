@@ -336,35 +336,55 @@ rouletteGenreOptions.addEventListener('click', (e) => {
 
 rouletteGenreTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteGenreTrigger, rouletteGenreOptions, rouletteGenreContainer); });
 
+// FUNÇÃO BLINDADA: Busca qualquer gênero em Filmes e Séries
 async function fetchRandomGlobalItem(genreId) {
   try {
-    const isMovie = Math.random() > 0.5; 
-    const type = isMovie ? 'movie' : 'tv';
+    // Define a ordem aleatória (50% de chance de começar com Filme, 50% com Série)
+    const types = Math.random() > 0.5 ? ['movie', 'tv'] : ['tv', 'movie'];
     
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const page = Math.floor(Math.random() * 20) + 1;
-      let url = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=${page}`;
-      
+    for (const type of types) {
+      // 1. Descobre o total de páginas para esse tipo/gênero
+      let initialUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=1`;
       if (genreId !== 'all') {
-        url += `&with_genres=${genreId}`;
+        initialUrl += `&with_genres=${genreId}`;
       }
+
+      const initialRes = await fetch(initialUrl);
+      const initialData = await initialRes.json();
       
-      const res = await fetch(url);
-      const data = await res.json();
+      // Se o gênero não existir para esse tipo (ex: Terror + Séries), pula para o próximo tipo
+      if (!initialData.results || initialData.results.length === 0) {
+        continue; 
+      }
+
+      const totalPages = initialData.total_pages;
       
-      if (data.results && data.results.length > 0) {
-        const validItems = data.results.filter(item => item.poster_path);
-        if (validItems.length > 0) {
-          const randomIndex = Math.floor(Math.random() * validItems.length);
-          const item = validItems[randomIndex];
-          
-          return {
-            tmdb_id: item.id,
-            title: item.title || item.name,
-            type: isMovie ? 'movie' : 'series',
-            poster_path: item.poster_path,
-            genre_ids: JSON.stringify(item.genre_ids || []),
-          };
+      // 2. Tenta até 3 vezes achar uma página que tenha pôsteres válidos
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const randomPage = Math.floor(Math.random() * totalPages) + 1;
+        
+        let finalUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=${randomPage}`;
+        if (genreId !== 'all') {
+          finalUrl += `&with_genres=${genreId}`;
+        }
+
+        const finalRes = await fetch(finalUrl);
+        const finalData = await finalRes.json();
+        
+        if (finalData.results && finalData.results.length > 0) {
+          const validItems = finalData.results.filter(item => item.poster_path);
+          if (validItems.length > 0) {
+            const randomIndex = Math.floor(Math.random() * validItems.length);
+            const item = validItems[randomIndex];
+            
+            return {
+              tmdb_id: item.id,
+              title: item.title || item.name,
+              type: type === 'movie' ? 'movie' : 'series',
+              poster_path: item.poster_path,
+              genre_ids: JSON.stringify(item.genre_ids || []),
+            };
+          }
         }
       }
     }
@@ -921,7 +941,6 @@ async function openPublicProfile(userId, username, avatarUrl) {
   if (avatarUrl) { img.src = avatarUrl; img.style.display = 'block'; text.style.display = 'none'; } 
   else { img.style.display = 'none'; text.style.display = 'flex'; text.textContent = username.charAt(0).toUpperCase(); }
   
-  // Configura o botão de seguir
   if (state.followingIds.has(userId)) {
     btnFollow.textContent = 'Seguindo';
     btnFollow.classList.remove('btn-primary');
