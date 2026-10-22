@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080c" />
+  <title>Nossa WatchList</title>
+  
+  <!-- Configurações do PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- NOVA LOGO AQUI -->
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div class="glow glow-3"></div>
+
+  <!-- TELA DE LOGIN -->
+  <div id="auth-screen" class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <!-- NOVA LOGO AQUI -->
+        <div class="logo"><img src="logo.png" alt="Logo"></div>
+        <h1>Bem-vindo(a)</h1>
+        <p>Crie sua conta ou entre para acessar suas listas.</p>
+      </div>
+      
+      <form id="auth-form">
+        <label class="field">
+          <span>Nome de Usuário</span>
+          <input type="text" id="auth-username" required placeholder="Ex: joao123" minlength="3" autocomplete="username" />
+        </label>
+        <label class="field">
+          <span>Senha</span>
+          <input type="password" id="auth-password" required placeholder="••••••••" minlength="6" autocomplete="current-password" />
+        </label>
+        
+        <div class="auth-actions">
+          <button type="submit" class="btn btn-primary" id="btn-login">Entrar</button>
+          <button type="button" class="btn btn-ghost" id="btn-signup">Criar Conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- APLICAÇÃO -->
+  <div id="app-screen" class="app-layout hidden">
+    
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <!-- NOVA LOGO AQUI -->
+          <div class="logo"><img src="logo.png" alt="Logo"></div>
+          <div class="brand-text">
+            <h1>WatchList</h1>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-tabs">
+        <button class="s-tab active" id="tab-my-lists" onclick="switchSidebarTab('my-lists')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Listas
+        </button>
+        <button class="s-tab" id="tab-community" onclick="switchSidebarTab('community')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Social
+        </button>
+        <button class="s-tab" id="tab-activity" onclick="switchSidebarTab('activity')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          Atividade
+        </button>
+      </div>
+
+      <div class="sidebar-content" id="view-my-lists">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button class="btn btn-primary" style="flex: 1; justify-content: center; padding: 10px;" id="btn-create-list">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Nova
+          </button>
+          <button class="btn btn-ghost" style="flex: 1; justify-content: center; padding: 10px;" id="btn-join-list" title="Entrar em lista compartilhada">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+            Entrar
+          </button>
+        </div>
+        <div class="lists-container" id="lists-container"></div>
+      </div>
+
+      <div class="sidebar-content hidden" id="view-community">
+        <div class="social-tabs">
+          <button class="social-tab active" onclick="switchSocialTab('search')">Descobrir</button>
+          <button class="social-tab" onclick="switchSocialTab('feed')">Feed</button>
+        </div>
+
+        <div id="social-search-view">
+          <div class="search-community">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="communitySearch" placeholder="Buscar @usuario..." autocomplete="off" />
+          </div>
+          <div class="community-results" id="communityResults">
+            <p class="community-hint">Digite um nome de usuário para encontrar pessoas e ver suas listas públicas.</p>
+          </div>
+        </div>
+
+        <div id="social-feed-view" class="hidden">
+          <div class="activity-list" id="social-feed-container">
+            <p class="community-hint">Siga pessoas para ver as atividades delas aqui.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-content hidden" id="view-activity">
+        <div class="activity-list" id="activity-list-container">
+          <p class="community-hint">Nenhuma atividade recente nesta lista.</p>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <div class="user-info" id="user-info" onclick="openProfileModal()" title="Ver Perfil">
+          <!-- Avatar e Nome inseridos via JS -->
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="main-bg-gradient"></div>
+
+      <header class="main-header">
+        <div class="header-top">
+          <div class="header-info">
+            <h2 id="active-list-name">Selecione uma lista</h2>
+            <p id="active-list-desc">Escolha ou crie uma lista para começar.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-ghost hidden" id="membersBtn" onclick="openMembersModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              Membros
+            </button>
+            <div class="search-internal hidden" id="internalSearchContainer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="searchInternal" placeholder="Buscar na lista..." />
+            </div>
+            <button class="btn btn-ghost hidden" id="discoverBtn" style="color:var(--amber); border-color:rgba(251,191,36,0.3);">
+              🎲 Descobrir
+            </button>
+            <button class="btn btn-primary hidden" id="addBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Adicionar
+            </button>
+            <button class="btn btn-install hidden" id="install-app-btn" type="button">
+              📲 Instalar App
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="container main-container">
+        <section class="stats" id="stats"></section>
+        
+        <div class="filters-bar">
+          <section class="filters" id="filters">
+            <button class="filter active" data-filter="all">Todos <span class="filter-count" data-count="all">0</span></button>
+            <button class="filter" data-filter="want">Quero ver <span class="filter-count" data-count="want">0</span></button>
+            <button class="filter" data-filter="watching">Assistindo <span class="filter-count" data-count="watching">0</span></button>
+            <button class="filter" data-filter="watched">Já vi <span class="filter-count" data-count="watched">0</span></button>
+          </section>
+
+          <div class="advanced-filters">
+            <div class="field custom-select-container" id="filterGenreContainer" style="margin: 0;">
+              <div class="custom-select-trigger" id="filterGenreTrigger" style="padding: 10px 14px; font-size: 13px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1);">
+                <span id="filterGenreText">Todos os Gêneros</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="field custom-select-container" id="sortOrderContainer" style="margin: 0;">
+              <div class="custom-select-trigger" id="sortOrderTrigger" style="padding: 10px 14px; font-size: 13px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1);">
+                <span id="sortOrderText">Mais Recentes</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="grid" id="grid"></section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL DA RODA DA SORTE -->
+  <div class="modal-overlay" id="discoverModal">
+    <div class="modal confirm-modal" style="max-width: 450px;">
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 24px; color: var(--amber); margin-bottom: 8px;">O que vamos assistir?</h2>
+        <p style="font-size: 13px; color: var(--text-2);">Escolha um gênero e deixe a sorte decidir.</p>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+        <div class="field custom-select-container" id="rouletteGenreContainer" style="flex: 1; margin: 0;">
+          <div class="custom-select-trigger" id="rouletteGenreTrigger" style="padding: 10px 14px; font-size: 13px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1);">
+            <span id="rouletteGenreText">Todos os Gêneros</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+      </div>
+      
+      <div class="slot-machine" id="slotMachine">
+        <div class="slot-poster-container">
+          <img id="slotPoster" class="slot-poster" src="" style="display: none;">
+          <div id="slotPlaceholder" class="slot-placeholder">🎬</div>
+        </div>
+      </div>
+
+      <h3 id="slotTitle" style="font-size: 20px; font-weight: 800; margin: 15px 0 5px; opacity: 0;">Título</h3>
+      <p id="slotType" style="font-size: 13px; color: var(--text-2); margin-bottom: 20px; opacity: 0;">Filme</p>
+
+      <div id="rouletteInitialActions" style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px;">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('discoverModal').classList.remove('open')">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="slotStartBtn" onclick="startRoulette()">Girar Roda 🎲</button>
+      </div>
+
+      <div class="confirm-actions hidden" id="slotFinalActions" style="grid-template-columns: 1fr 1fr; margin-top: 20px;">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('discoverModal').classList.remove('open')">Cancelar</button>
+        <button type="button" class="btn btn-primary hidden" id="slotAcceptBtn">Adicionar à Lista</button>
+      </div>
+      <button type="button" class="btn btn-ghost hidden" id="slotRetryBtn" style="width: 100%; margin-top: 10px;" onclick="startRoulette()">Girar novamente</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE MEMBROS -->
+  <div class="modal-overlay" id="membersModal">
+    <div class="modal add-modal small-modal">
+      <div class="modal-header">
+        <h2>Membros da Lista</h2>
+        <button class="icon-btn" type="button" onclick="document.getElementById('membersModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="members-content" id="membersList" style="padding: 24px; display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
+        <!-- Membros inseridos via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE COMPARTILHAR LISTA -->
+  <div class="modal-overlay" id="shareModal">
+    <div class="modal add-modal small-modal">
+      <div class="modal-header">
+        <h2>Compartilhar Lista</h2>
+        <button class="icon-btn" type="button" onclick="document.getElementById('shareModal').classList.remove('open')">✕</button>
+      </div>
+      <div style="padding: 24px;">
+        <p style="font-size: 13px; margin-bottom: 12px; color: var(--text-2);">
+          Envie este código para quem você quer convidar. A pessoa poderá adicionar e editar filmes nesta lista com você.
+        </p>
+        <div class="share-code-box">
+          <span id="shareCodeText">CARREGANDO...</span>
+          <button class="btn btn-primary" onclick="copyShareCode()">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE ENTRAR EM LISTA -->
+  <div class="modal-overlay" id="joinListModal">
+    <div class="modal add-modal small-modal">
+      <div class="modal-header">
+        <h2>Entrar em uma Lista</h2>
+        <button class="icon-btn" type="button" onclick="document.getElementById('joinListModal').classList.remove('open')">✕</button>
+      </div>
+      <div style="padding: 24px;">
+        <p style="font-size: 13px; margin-bottom: 16px; color: var(--text-2);">
+          Cole o código de convite que você recebeu.
+        </p>
+        <input type="text" id="joinCodeInput" placeholder="Ex: A1B2C3" style="width: 100%; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white; text-transform: uppercase; text-align: center; font-size: 18px; letter-spacing: 2px; font-weight: bold; margin-bottom: 16px; outline: none;">
+        <div class="modal-actions" style="margin-top: 0; border: none;">
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('joinListModal').classList.remove('open')">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="joinSharedList()">Entrar na Lista</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PERFIL PREMIUM -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal profile-modal">
+      <div class="profile-banner">
+        <button class="icon-btn close-profile" type="button" onclick="document.getElementById('profileModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="profile-content">
+        <div id="profileViewMode">
+          <div class="profile-avatar-wrap">
+            <img id="profileAvatarImg" class="profile-avatar-img" src="" style="display: none;">
+            <div class="profile-avatar-text" id="profileAvatarText">T</div>
+          </div>
+          <div class="profile-header">
+            <h3 id="profileUsername">@teste</h3>
+            <p id="profileJoinDate">Entrou em Outubro de 2026</p>
+          </div>
+          
+          <div class="profile-stats">
+            <div class="p-stat">
+              <div class="p-stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              </div>
+              <div class="p-stat-data">
+                <span id="pStatTotalLists">0</span>
+                <label>Listas</label>
+              </div>
+            </div>
+            <div class="p-stat">
+              <div class="p-stat-icon" style="color: var(--amber);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+              </div>
+              <div class="p-stat-data">
+                <span id="pStatTotalItems">0</span>
+                <label>Títulos</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button class="btn btn-ghost" onclick="document.getElementById('profileModal').classList.remove('open')">Voltar</button>
+            <button class="btn btn-primary" onclick="toggleProfileEdit(true)">Editar Perfil</button>
+          </div>
+          <button class="btn btn-danger" style="width:100%; margin-top: 10px; padding: 10px; font-size: 13px;" id="btn-logout">Sair da Conta</button>
+        </div>
+
+        <div id="profileEditMode" class="hidden">
+          <h3 style="margin-bottom: 20px;">Editar Perfil</h3>
+          <div class="edit-avatar-container">
+            <img id="editAvatarPreview" class="profile-avatar-img" src="" style="display: none;">
+            <div class="profile-avatar-text" id="editAvatarText">T</div>
+            <label for="avatarUpload" class="avatar-upload-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </label>
+            <input type="file" id="avatarUpload" accept="image/*" style="display: none;" onchange="previewAvatar(event)">
+          </div>
+
+          <label class="field text-left">
+            <span>Nome de Usuário</span>
+            <input type="text" id="editUsername" required />
+          </label>
+
+          <div class="profile-actions" style="margin-top: 24px;">
+            <button class="btn btn-ghost" onclick="toggleProfileEdit(false)">Cancelar</button>
+            <button class="btn btn-primary" id="btn-save-profile" onclick="saveProfileChanges()">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PERFIL PÚBLICO -->
+  <div class="modal-overlay" id="publicProfileModal">
+    <div class="modal profile-modal">
+      <div class="profile-banner" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+        <button class="icon-btn close-profile" type="button" onclick="document.getElementById('publicProfileModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="profile-content">
+        <div class="profile-avatar-wrap">
+          <img id="pubProfileAvatarImg" class="profile-avatar-img" src="" style="display: none;">
+          <div class="profile-avatar-text" id="pubProfileAvatarText">U</div>
+        </div>
+        <div class="profile-header">
+          <h3 id="pubProfileUsername">@usuario</h3>
+        </div>
+        
+        <div class="profile-actions" style="margin-bottom: 20px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('publicProfileModal').classList.remove('open')">Fechar</button>
+          <button class="btn btn-primary" id="btn-follow">Seguir</button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h4 style="font-size: 13px; font-weight: 600; color: var(--text-2); text-align: left; margin-bottom: 12px;">Listas Públicas</h4>
+          <div id="publicListsContainer" class="public-lists-container">
+             <!-- Listas inseridas via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE VISUALIZAR DETALHES DO ITEM -->
+  <div class="modal-overlay" id="viewItemModal">
+    <div class="modal add-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2>Detalhes do Título</h2>
+        <button class="icon-btn" type="button" onclick="document.getElementById('viewItemModal').classList.remove('open')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="poster-col">
+          <div class="poster-bg" id="viewPosterBg"></div>
+          <img id="viewLargePoster" class="large-poster" src="" alt="Pôster" style="display: none;">
+          <div class="poster-placeholder" id="viewPosterPlaceholder" style="display: none;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+            <span>Sem capa</span>
+          </div>
+        </div>
+
+        <div class="form-col view-col">
+          <h1 id="viewTitle" style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">Título</h1>
+          
+          <div class="badges" style="margin-bottom: 10px;" id="viewBadges">
+            <!-- Badges inseridos via JS -->
+          </div>
+
+          <div id="viewGenresDisplay" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;"></div>
+
+          <div class="view-section" id="viewWatchProvidersSection" style="display: none; margin-bottom: 15px;">
+            <span class="view-label">Onde Assistir</span>
+            <div id="viewWatchProviders" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;"></div>
+          </div>
+
+          <div class="view-section" id="viewProgressSection" style="display: none;">
+            <span class="view-label">Progresso</span>
+            <div id="viewProgressText" class="progress-info" style="font-size: 16px;"></div>
+          </div>
+
+          <div class="view-section" style="flex: 1; overflow-y: auto;">
+            <span class="view-label">Avaliações</span>
+            <div id="viewReviewsList" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+              <!-- Reviews inseridas via JS -->
+            </div>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 20px;">
+            <button type="button" class="btn btn-ghost" style="width: 100%;" onclick="document.getElementById('viewItemModal').classList.remove('open')">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE NOVA LISTA -->
+  <div class="modal-overlay" id="listModal">
+    <div class="modal add-modal small-modal">
+      <div class="modal-header">
+        <h2>Criar Nova Lista</h2>
+        <button class="icon-btn" type="button" onclick="document.getElementById('listModal').classList.remove('open')">✕</button>
+      </div>
+      <form id="listForm" style="padding: 24px;">
+        <label class="field">
+          <span>Nome da Lista</span>
+          <input type="text" id="listName" required placeholder="Ex: Filmes de Terror" autocomplete="off" />
+        </label>
+        <label class="field" style="flex-direction: row; align-items: center; gap: 10px; cursor: pointer; margin-top: 10px;">
+          <input type="checkbox" id="listPublic" checked style="width: 20px; height: 20px; cursor: pointer;" />
+          <span style="margin:0;">Deixar lista pública (outros podem ver)</span>
+        </label>
+        <div class="modal-actions" style="margin-top: 24px; border: none;">
+          <button type="submit" class="btn btn-primary">Criar Lista</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE ADIÇÃO / EDIÇÃO -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal add-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="modalTitle">Adicionar título</h2>
+        <button class="icon-btn" id="closeModal" type="button" aria-label="Fechar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="poster-col">
+          <div class="poster-bg" id="posterBg"></div>
+          <div class="poster-placeholder" id="posterPlaceholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+            <span>Nenhum título selecionado</span>
+          </div>
+          <img id="largePoster" class="large-poster" src="" alt="Pôster">
+        </div>
+
+        <div class="form-col">
+          <div class="field search-field">
+            <span>Buscar título</span>
+            <div class="search-wrapper">
+              <input type="text" id="searchInput" placeholder="Ex: The Office, Vingadores..." autocomplete="off" />
+              <div class="search-spinner" id="searchSpinner"></div>
+            </div>
+            <div class="search-dropdown" id="searchDropdown">
+              <div class="search-empty">Digite para buscar...</div>
+            </div>
+          </div>
+
+          <form id="itemForm">
+            <input type="hidden" id="itemId" />
+            <input type="hidden" id="tmdbId" />
+            <input type="hidden" id="posterPath" />
+            <input type="hidden" id="genreIds" value="[]" />
+            <input type="hidden" id="type" value="movie" />
+            <input type="hidden" id="title" required />
+            <input type="hidden" id="rating" value="0" />
+
+            <div id="editGenresDisplay" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;"></div>
+
+            <div class="field">
+              <span>Status (Progresso Compartilhado)</span>
+              <div class="segmented" data-field="status">
+                <button type="button" data-value="want" class="active">Quero ver</button>
+                <button type="button" data-value="watching">Assistindo</button>
+                <button type="button" data-value="watched">Já vi</button>
+              </div>
+              <input type="hidden" id="status" value="want" />
+            </div>
+
+            <div class="row" id="progressFields" style="display:none">
+              <div class="field custom-select-container" id="seasonContainer">
+                <span>Temporada</span>
+                <div class="custom-select-trigger" id="seasonTrigger">
+                  <span id="seasonText">Selecione...</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <input type="hidden" id="seasonSelect" value="1">
+              </div>
+
+              <div class="field custom-select-container tooltip-target" id="episodeContainer" data-tooltip="">
+                <span>Episódio</span>
+                <div class="custom-select-trigger" id="episodeTrigger">
+                  <span id="episodeText">Selecione...</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <input type="hidden" id="episodeSelect" value="1">
+              </div>
+            </div>
+
+            <div class="field" style="margin-top: 10px;">
+              <span>Sua Avaliação <span class="optional">(individual)</span></span>
+              <div class="star-rating" id="starRating">
+                <svg class="star" data-value="1" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="star" data-value="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="star" data-value="3" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="star" data-value="4" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="star" data-value="5" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </div>
+            </div>
+
+            <label class="field">
+              <span>Sua Resenha <span class="optional">(individual)</span></span>
+              <input type="text" id="note" placeholder="O que você achou?" autocomplete="off" />
+            </label>
+
+            <div id="otherReviewsContainer" style="display: none; margin-top: 10px; margin-bottom: 20px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-2);">Resenhas dos Amigos</span>
+              <div id="otherReviewsList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                <!-- Reviews inseridas via JS -->
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-ghost" id="cancelBtn">Cancelar</button>
+              <button type="submit" class="btn btn-primary" id="saveBtn" disabled>Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal confirm-modal" role="alertdialog" aria-modal="true">
+      <div class="confirm-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+        </svg>
+      </div>
+      <h2>Remover da lista?</h2>
+      <p class="confirm-text" id="confirmText"></p>
+      <div class="confirm-actions">
+        <button type="button" class="btn btn-ghost" id="confirmCancel">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirmOk">Remover</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+  <div class="custom-options" id="seasonOptions"></div>
+  <div class="custom-options" id="episodeOptions"></div>
+  <div class="custom-options" id="filterGenreOptions"></div>
+  <div class="custom-options" id="sortOrderOptions"></div>
+  <div class="custom-options" id="rouletteGenreOptions"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
