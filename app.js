@@ -71,7 +71,7 @@ const state = {
   searchTimeout: null, selectedResult: null, seasonsCache: {}, episodesCache: {},
   viewingUserId: null, currentRating: 0, listToShare: null, isLocalAction: false,
   processingEp: new Set(), activities: [], rouletteInterval: null, currentRouletteItem: null,
-  rouletteGenre: 'all', viewingPublicUserId: null, followingIds: new Set(), socialTab: 'search'
+  rouletteType: 'all', rouletteGenre: 'all', viewingPublicUserId: null, followingIds: new Set(), socialTab: 'search'
 };
 
 let realtimeChannel = null;
@@ -119,6 +119,11 @@ const slotRetryBtn = document.getElementById('slotRetryBtn');
 const slotStartBtn = document.getElementById('slotStartBtn');
 const rouletteInitialActions = document.getElementById('rouletteInitialActions');
 const slotFinalActions = document.getElementById('slotFinalActions');
+
+const rouletteTypeContainer = document.getElementById('rouletteTypeContainer');
+const rouletteTypeTrigger = document.getElementById('rouletteTypeTrigger');
+const rouletteTypeOptions = document.getElementById('rouletteTypeOptions');
+const rouletteTypeText = document.getElementById('rouletteTypeText');
 
 const rouletteGenreContainer = document.getElementById('rouletteGenreContainer');
 const rouletteGenreTrigger = document.getElementById('rouletteGenreTrigger');
@@ -299,8 +304,12 @@ btnFollow.addEventListener('click', () => {
 // RODA DA SORTE GLOBAL (DESCUBRA)
 // ============================================
 discoverBtn.addEventListener('click', () => {
+  state.rouletteType = 'all';
   state.rouletteGenre = 'all';
+  rouletteTypeText.textContent = 'Tudo';
   rouletteGenreText.textContent = 'Todos os Gêneros';
+  
+  populateRouletteTypes();
   populateRouletteGenres();
   
   discoverModal.classList.add('open');
@@ -320,12 +329,27 @@ discoverBtn.addEventListener('click', () => {
   slotStartBtn.disabled = false;
 });
 
+function populateRouletteTypes() {
+  rouletteTypeOptions.innerHTML = `
+    <div class="custom-option ${state.rouletteType === 'all' ? 'selected' : ''}" data-value="all">Tudo</div>
+    <div class="custom-option ${state.rouletteType === 'movie' ? 'selected' : ''}" data-value="movie">Filmes</div>
+    <div class="custom-option ${state.rouletteType === 'tv' ? 'selected' : ''}" data-value="tv">Séries</div>
+  `;
+}
+
 function populateRouletteGenres() {
   const sortedGenres = Object.keys(TMDB_GENRES).sort((a,b) => TMDB_GENRES[a].localeCompare(TMDB_GENRES[b]));
   let html = `<div class="custom-option ${state.rouletteGenre === 'all' ? 'selected' : ''}" data-value="all">Todos os Gêneros</div>`;
   html += sortedGenres.map(id => `<div class="custom-option ${state.rouletteGenre === String(id) ? 'selected' : ''}" data-value="${id}">${TMDB_GENRES[id]}</div>`).join('');
   rouletteGenreOptions.innerHTML = html;
 }
+
+rouletteTypeOptions.addEventListener('click', (e) => {
+  const opt = e.target.closest('.custom-option'); if (!opt) return;
+  state.rouletteType = opt.dataset.value;
+  rouletteTypeText.textContent = opt.textContent;
+  rouletteTypeOptions.classList.remove('open'); rouletteTypeContainer.classList.remove('open');
+});
 
 rouletteGenreOptions.addEventListener('click', (e) => {
   const opt = e.target.closest('.custom-option'); if (!opt) return;
@@ -334,43 +358,40 @@ rouletteGenreOptions.addEventListener('click', (e) => {
   rouletteGenreOptions.classList.remove('open'); rouletteGenreContainer.classList.remove('open');
 });
 
+rouletteTypeTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteTypeTrigger, rouletteTypeOptions, rouletteTypeContainer); });
 rouletteGenreTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteGenreTrigger, rouletteGenreOptions, rouletteGenreContainer); });
 
 // FUNÇÃO BLINDADA: Busca qualquer gênero em Filmes e Séries
-async function fetchRandomGlobalItem(genreId) {
-  try {
-    // Define a ordem aleatória (50% de chance de começar com Filme, 50% com Série)
-    const types = Math.random() > 0.5 ? ['movie', 'tv'] : ['tv', 'movie'];
-    
-    for (const type of types) {
-      // 1. Descobre o total de páginas para esse tipo/gênero
+async function fetchRandomGlobalItem(genreId, typeFilter) {
+  let types = [];
+  if (typeFilter === 'movie') types = ['movie'];
+  else if (typeFilter === 'tv') types = ['tv'];
+  else types = Math.random() > 0.5 ? ['movie', 'tv'] : ['tv', 'movie'];
+
+  for (const type of types) {
+    try {
+      // 1. Descobre o total de páginas
       let initialUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=1`;
-      if (genreId !== 'all') {
-        initialUrl += `&with_genres=${genreId}`;
-      }
+      if (genreId !== 'all') initialUrl += `&with_genres=${genreId}`;
 
       const initialRes = await fetch(initialUrl);
+      if (!initialRes.ok) continue; 
       const initialData = await initialRes.json();
-      
-      // Se o gênero não existir para esse tipo (ex: Terror + Séries), pula para o próximo tipo
-      if (!initialData.results || initialData.results.length === 0) {
-        continue; 
-      }
+      if (!initialData.results || initialData.results.length === 0) continue; 
 
       const totalPages = initialData.total_pages;
       
-      // 2. Tenta até 3 vezes achar uma página que tenha pôsteres válidos
+      // 2. Tenta até 3 vezes achar uma página com capa
       for (let attempt = 0; attempt < 3; attempt++) {
         const randomPage = Math.floor(Math.random() * totalPages) + 1;
         
         let finalUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=${randomPage}`;
-        if (genreId !== 'all') {
-          finalUrl += `&with_genres=${genreId}`;
-        }
+        if (genreId !== 'all') finalUrl += `&with_genres=${genreId}`;
 
         const finalRes = await fetch(finalUrl);
+        if (!finalRes.ok) continue;
+
         const finalData = await finalRes.json();
-        
         if (finalData.results && finalData.results.length > 0) {
           const validItems = finalData.results.filter(item => item.poster_path);
           if (validItems.length > 0) {
@@ -387,12 +408,11 @@ async function fetchRandomGlobalItem(genreId) {
           }
         }
       }
+    } catch (err) {
+      console.warn(`Erro ao tentar buscar ${type}, tentando o próximo...`, err);
     }
-    return null;
-  } catch (err) {
-    console.error(err);
-    return null;
   }
+  return null;
 }
 
 window.startRoulette = async () => {
@@ -413,7 +433,7 @@ window.startRoulette = async () => {
   slotPoster.style.display = 'none';
   slotPlaceholder.style.display = 'flex';
 
-  const winner = await fetchRandomGlobalItem(state.rouletteGenre);
+  const winner = await fetchRandomGlobalItem(state.rouletteGenre, state.rouletteType);
   
   if (!winner) {
     slotMachine.classList.remove('slot-spinning');
@@ -421,7 +441,7 @@ window.startRoulette = async () => {
     rouletteInitialActions.style.display = 'grid';
     slotStartBtn.disabled = false;
     slotStartBtn.textContent = 'Girar Roda 🎲';
-    return showToast('Nenhum título encontrado com esse filtro. Tente outro!', 'info');
+    return showToast('Nenhum título encontrado com essa combinação. Tente outro!', 'info');
   }
 
   let shuffleCount = 0;
@@ -1373,7 +1393,7 @@ function toggleDropdown(triggerEl, optionsEl, containerEl) {
     else { optionsEl.style.top = `${rect.bottom + 4}px`; optionsEl.style.bottom = 'auto'; }
   } else {
     optionsEl.style.left = `${rect.left}px`; 
-    if (optionsEl.id === 'seasonOptions' || optionsEl.id === 'filterGenreOptions' || optionsEl.id === 'sortOrderOptions' || optionsEl.id === 'rouletteGenreOptions') {
+    if (optionsEl.id === 'seasonOptions' || optionsEl.id === 'filterGenreOptions' || optionsEl.id === 'sortOrderOptions' || optionsEl.id === 'rouletteGenreOptions' || optionsEl.id === 'rouletteTypeOptions') {
       optionsEl.style.width = `${rect.width}px`;
     } else {
       optionsEl.style.width = `${rect.width}px`;

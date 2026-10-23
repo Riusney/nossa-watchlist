@@ -30,7 +30,6 @@
   <div id="auth-screen" class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <!-- NOVA LOGO AQUI -->
         <div class="logo"><img src="logo.png" alt="Logo"></div>
         <h1>Bem-vindo(a)</h1>
         <p>Crie sua conta ou entre para acessar suas listas.</p>
@@ -60,7 +59,6 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="brand">
-          <!-- NOVA LOGO AQUI -->
           <div class="logo"><img src="logo.png" alt="Logo"></div>
           <div class="brand-text">
             <h1>WatchList</h1>
@@ -202,11 +200,20 @@
     <div class="modal confirm-modal" style="max-width: 450px;">
       <div style="margin-bottom: 20px;">
         <h2 style="font-size: 24px; color: var(--amber); margin-bottom: 8px;">O que vamos assistir?</h2>
-        <p style="font-size: 13px; color: var(--text-2);">Escolha um gênero e deixe a sorte decidir.</p>
+        <p style="font-size: 13px; color: var(--text-2);">Escolha o tipo, o gênero e deixe a sorte decidir.</p>
       </div>
 
-      <div style="display: flex; gap: 8px; margin-bottom: 20px;">
-        <div class="field custom-select-container" id="rouletteGenreContainer" style="flex: 1; margin: 0;">
+      <!-- Filtros da Roda da Sorte -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px;">
+        <!-- NOVO FILTRO DE TIPO -->
+        <div class="field custom-select-container" id="rouletteTypeContainer" style="margin: 0;">
+          <div class="custom-select-trigger" id="rouletteTypeTrigger" style="padding: 10px 14px; font-size: 13px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1);">
+            <span id="rouletteTypeText">Tudo</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <!-- FILTRO DE GÊNERO -->
+        <div class="field custom-select-container" id="rouletteGenreContainer" style="margin: 0;">
           <div class="custom-select-trigger" id="rouletteGenreTrigger" style="padding: 10px 14px; font-size: 13px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1);">
             <span id="rouletteGenreText">Todos os Gêneros</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
@@ -595,6 +602,7 @@
   <div class="custom-options" id="episodeOptions"></div>
   <div class="custom-options" id="filterGenreOptions"></div>
   <div class="custom-options" id="sortOrderOptions"></div>
+  <div class="custom-options" id="rouletteTypeOptions"></div>
   <div class="custom-options" id="rouletteGenreOptions"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
