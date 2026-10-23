@@ -52,15 +52,23 @@ const TMDB_API_KEY = 'e9ede36f1f7b66d5e8457d5a26f399e7';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w500';
 
-// Banco de dados completo de gêneros do TMDB
-const TMDB_GENRES = {
+// Gêneros SEPARADOS por tipo para a Roleta não bugar
+const MOVIE_GENRES = {
   28: 'Ação', 12: 'Aventura', 16: 'Animação', 35: 'Comédia', 80: 'Crime', 99: 'Documentário',
   18: 'Drama', 10751: 'Família', 14: 'Fantasia', 36: 'História', 27: 'Terror', 10402: 'Música',
   9648: 'Mistério', 10749: 'Romance', 878: 'Ficção Científica', 10770: 'Cinema TV', 53: 'Suspense',
-  10752: 'Guerra', 37: 'Faroeste',
-  10759: 'Ação & Aventura', 10762: 'Kids', 10763: 'Notícias', 10764: 'Reality', 
-  10765: 'Sci-Fi & Fantasia', 10766: 'Novela', 10767: 'Talk Show', 10768: 'Guerra & Política'
+  10752: 'Guerra', 37: 'Faroeste'
 };
+
+const TV_GENRES = {
+  10759: 'Ação & Aventura', 16: 'Animação', 35: 'Comédia', 80: 'Crime', 99: 'Documentário',
+  18: 'Drama', 10751: 'Família', 10762: 'Kids', 9648: 'Mistério', 10763: 'Notícias', 
+  10764: 'Reality', 10765: 'Sci-Fi & Fantasia', 10766: 'Novela', 10767: 'Talk Show', 
+  10768: 'Guerra & Política', 37: 'Faroeste'
+};
+
+// Banco de dados unificado (usado para exibir os nomes nos cards)
+const TMDB_GENRES = { ...MOVIE_GENRES, ...TV_GENRES };
 
 // ============================================
 // ESTADO GLOBAL E REALTIME
@@ -338,9 +346,21 @@ function populateRouletteTypes() {
 }
 
 function populateRouletteGenres() {
-  const sortedGenres = Object.keys(TMDB_GENRES).sort((a,b) => TMDB_GENRES[a].localeCompare(TMDB_GENRES[b]));
+  let genresToDisplay = {};
+  if (state.rouletteType === 'movie') genresToDisplay = MOVIE_GENRES;
+  else if (state.rouletteType === 'tv') genresToDisplay = TV_GENRES;
+  else genresToDisplay = { ...MOVIE_GENRES, ...TV_GENRES };
+
+  // Se o gênero atual não existir na nova lista (ex: mudou de Filme p/ Série e estava Terror), reseta
+  if (state.rouletteGenre !== 'all' && !genresToDisplay[state.rouletteGenre]) {
+    state.rouletteGenre = 'all';
+    rouletteGenreText.textContent = 'Todos os Gêneros';
+  }
+
+  const sortedGenres = Object.keys(genresToDisplay).sort((a,b) => genresToDisplay[a].localeCompare(genresToDisplay[b]));
+  
   let html = `<div class="custom-option ${state.rouletteGenre === 'all' ? 'selected' : ''}" data-value="all">Todos os Gêneros</div>`;
-  html += sortedGenres.map(id => `<div class="custom-option ${state.rouletteGenre === String(id) ? 'selected' : ''}" data-value="${id}">${TMDB_GENRES[id]}</div>`).join('');
+  html += sortedGenres.map(id => `<div class="custom-option ${state.rouletteGenre === String(id) ? 'selected' : ''}" data-value="${id}">${genresToDisplay[id]}</div>`).join('');
   rouletteGenreOptions.innerHTML = html;
 }
 
@@ -349,6 +369,7 @@ rouletteTypeOptions.addEventListener('click', (e) => {
   state.rouletteType = opt.dataset.value;
   rouletteTypeText.textContent = opt.textContent;
   rouletteTypeOptions.classList.remove('open'); rouletteTypeContainer.classList.remove('open');
+  populateRouletteGenres(); // Atualiza a lista de gêneros
 });
 
 rouletteGenreOptions.addEventListener('click', (e) => {
@@ -361,7 +382,7 @@ rouletteGenreOptions.addEventListener('click', (e) => {
 rouletteTypeTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteTypeTrigger, rouletteTypeOptions, rouletteTypeContainer); });
 rouletteGenreTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteGenreTrigger, rouletteGenreOptions, rouletteGenreContainer); });
 
-// FUNÇÃO BLINDADA: Busca qualquer gênero em Filmes e Séries
+// FUNÇÃO BLINDADA COM 10 TENTATIVAS
 async function fetchRandomGlobalItem(genreId, typeFilter) {
   let types = [];
   if (typeFilter === 'movie') types = ['movie'];
@@ -370,7 +391,6 @@ async function fetchRandomGlobalItem(genreId, typeFilter) {
 
   for (const type of types) {
     try {
-      // 1. Descobre o total de páginas
       let initialUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=1`;
       if (genreId !== 'all') initialUrl += `&with_genres=${genreId}`;
 
@@ -379,11 +399,13 @@ async function fetchRandomGlobalItem(genreId, typeFilter) {
       const initialData = await initialRes.json();
       if (!initialData.results || initialData.results.length === 0) continue; 
 
-      const totalPages = initialData.total_pages;
+      const totalPages = initialData.total_pages || 1;
       
-      // 2. Tenta até 3 vezes achar uma página com capa
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const randomPage = Math.floor(Math.random() * totalPages) + 1;
+      // Aumentado para 10 tentativas para garantir que acharemos pôsteres
+      let attempts = 0;
+      while (attempts < 10) {
+        attempts++;
+        const randomPage = Math.max(1, Math.floor(Math.random() * totalPages) + 1);
         
         let finalUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=${randomPage}`;
         if (genreId !== 'all') finalUrl += `&with_genres=${genreId}`;
