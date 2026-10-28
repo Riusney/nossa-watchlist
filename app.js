@@ -618,28 +618,17 @@ function setupRealtime(listId) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
       if (state.isLocalAction) return;
       
-      if (payload.eventType === 'INSERT' && payload.new.list_id === state.activeListId) {
-        fetchItems(); showToast(`Novo título: "${payload.new.title}"`, 'info');
+      // CORREÇÃO DEFINITIVA: Força a atualização da lista inteira
+      // Isso evita problemas com payloads incompletos do WebSocket
+      fetchItems();
       
-      } else if (payload.eventType === 'UPDATE') {
-        // A correção está aqui: não verificamos o list_id, apenas o id do item
-        const idx = state.items.findIndex(i => i.id === payload.new.id);
-        if (idx > -1) { 
-          state.items[idx] = { ...state.items[idx], ...payload.new }; 
-          render(); 
-        }
-      
-      } else if (payload.eventType === 'DELETE') {
-        if (payload.old && payload.old.id) {
-          const idx = state.items.findIndex(i => i.id === payload.old.id);
-          if (idx > -1) { state.items.splice(idx, 1); render(); }
-        } else { fetchItems(); }
+      if (payload.eventType === 'INSERT' && payload.new && payload.new.title) {
+        showToast(`Novo título: "${payload.new.title}"`, 'info');
       }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'item_reviews' }, (payload) => {
       if (state.isLocalAction) return;
-      if (payload.new && payload.new.user_id !== state.user.id) fetchItems();
-      else if (payload.eventType === 'DELETE') fetchItems();
+      fetchItems(); // Atualiza a lista se qualquer review mudar
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activities' }, (payload) => {
       if (payload.new.list_id === state.activeListId) fetchActivities();
