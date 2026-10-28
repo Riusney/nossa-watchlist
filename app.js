@@ -616,12 +616,13 @@ function setupRealtime(listId) {
   realtimeChannel = supabaseClient
     .channel('list-updates')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
+      // Se a alteração foi feita por você mesmo no site, ignora para não piscar a tela
       if (state.isLocalAction) return;
       
-      // CORREÇÃO DEFINITIVA: Força a atualização da lista inteira
-      // Isso evita problemas com payloads incompletos do WebSocket
-      fetchItems();
+      // Busca os dados atualizados do banco (seja INSERT ou UPDATE)
+      fetchItems(); 
       
+      // Mostra o Toast apenas se for um filme novo
       if (payload.eventType === 'INSERT' && payload.new && payload.new.title) {
         showToast(`Novo título: "${payload.new.title}"`, 'info');
       }
@@ -634,7 +635,12 @@ function setupRealtime(listId) {
       if (payload.new.list_id === state.activeListId) fetchActivities();
       if (state.followingIds.has(payload.new.user_id) && state.socialTab === 'feed') loadSocialFeed();
     })
-    .subscribe();
+    .subscribe((status) => {
+      // Apenas para debug: mostra no console se o Realtime conectou
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Realtime conectado!');
+      }
+    });
 }
 
 // ============================================
