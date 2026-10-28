@@ -351,7 +351,6 @@ function populateRouletteGenres() {
   else if (state.rouletteType === 'tv') genresToDisplay = TV_GENRES;
   else genresToDisplay = { ...MOVIE_GENRES, ...TV_GENRES };
 
-  // Se o gênero atual não existir na nova lista (ex: mudou de Filme p/ Série e estava Terror), reseta
   if (state.rouletteGenre !== 'all' && !genresToDisplay[state.rouletteGenre]) {
     state.rouletteGenre = 'all';
     rouletteGenreText.textContent = 'Todos os Gêneros';
@@ -369,7 +368,7 @@ rouletteTypeOptions.addEventListener('click', (e) => {
   state.rouletteType = opt.dataset.value;
   rouletteTypeText.textContent = opt.textContent;
   rouletteTypeOptions.classList.remove('open'); rouletteTypeContainer.classList.remove('open');
-  populateRouletteGenres(); // Atualiza a lista de gêneros
+  populateRouletteGenres();
 });
 
 rouletteGenreOptions.addEventListener('click', (e) => {
@@ -382,7 +381,6 @@ rouletteGenreOptions.addEventListener('click', (e) => {
 rouletteTypeTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteTypeTrigger, rouletteTypeOptions, rouletteTypeContainer); });
 rouletteGenreTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(rouletteGenreTrigger, rouletteGenreOptions, rouletteGenreContainer); });
 
-// FUNÇÃO BLINDADA COM 10 TENTATIVAS
 async function fetchRandomGlobalItem(genreId, typeFilter) {
   let types = [];
   if (typeFilter === 'movie') types = ['movie'];
@@ -400,13 +398,10 @@ async function fetchRandomGlobalItem(genreId, typeFilter) {
       if (!initialData.results || initialData.results.length === 0) continue; 
 
       const totalPages = initialData.total_pages || 1;
-      
-      // Aumentado para 10 tentativas para garantir que acharemos pôsteres
       let attempts = 0;
       while (attempts < 10) {
         attempts++;
         const randomPage = Math.max(1, Math.floor(Math.random() * totalPages) + 1);
-        
         let finalUrl = `${TMDB_BASE}/discover/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&sort_by=popularity.desc&page=${randomPage}`;
         if (genreId !== 'all') finalUrl += `&with_genres=${genreId}`;
 
@@ -419,20 +414,15 @@ async function fetchRandomGlobalItem(genreId, typeFilter) {
           if (validItems.length > 0) {
             const randomIndex = Math.floor(Math.random() * validItems.length);
             const item = validItems[randomIndex];
-            
             return {
-              tmdb_id: item.id,
-              title: item.title || item.name,
+              tmdb_id: item.id, title: item.title || item.name,
               type: type === 'movie' ? 'movie' : 'series',
-              poster_path: item.poster_path,
-              genre_ids: JSON.stringify(item.genre_ids || []),
+              poster_path: item.poster_path, genre_ids: JSON.stringify(item.genre_ids || []),
             };
           }
         }
       }
-    } catch (err) {
-      console.warn(`Erro ao tentar buscar ${type}, tentando o próximo...`, err);
-    }
+    } catch (err) { console.warn(`Erro ao tentar buscar ${type}`, err); }
   }
   return null;
 }
@@ -517,20 +507,12 @@ document.getElementById('slotAcceptBtn').addEventListener('click', async () => {
   slotAcceptBtn.textContent = 'Salvando...';
   
   const { data: newItem, error } = await supabaseClient.from('items').insert({
-    list_id: state.activeListId,
-    title: item.title,
-    type: item.type,
-    status: 'want',
-    tmdb_id: item.tmdb_id,
-    poster_path: item.poster_path,
-    genre_ids: item.genre_ids
+    list_id: state.activeListId, title: item.title, type: item.type, status: 'want',
+    tmdb_id: item.tmdb_id, poster_path: item.poster_path, genre_ids: item.genre_ids
   }).select().single();
 
   if (!error) {
-    await supabaseClient.from('item_reviews').insert({
-      item_id: newItem.id, user_id: state.user.id, rating: 0, note: ''
-    });
-    
+    await supabaseClient.from('item_reviews').insert({ item_id: newItem.id, user_id: state.user.id, rating: 0, note: '' });
     await logActivity(`adicionou "${item.title}" via Roda da Sorte`);
     await fetchItems();
     showToast(`"${item.title}" adicionado à lista!`, 'success');
@@ -635,11 +617,18 @@ function setupRealtime(listId) {
     .channel('list-updates')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
       if (state.isLocalAction) return;
+      
       if (payload.eventType === 'INSERT' && payload.new.list_id === state.activeListId) {
         fetchItems(); showToast(`Novo título: "${payload.new.title}"`, 'info');
-      } else if (payload.eventType === 'UPDATE' && payload.new.list_id === state.activeListId) {
+      
+      } else if (payload.eventType === 'UPDATE') {
+        // A correção está aqui: não verificamos o list_id, apenas o id do item
         const idx = state.items.findIndex(i => i.id === payload.new.id);
-        if (idx > -1) { state.items[idx] = { ...state.items[idx], ...payload.new }; render(); }
+        if (idx > -1) { 
+          state.items[idx] = { ...state.items[idx], ...payload.new }; 
+          render(); 
+        }
+      
       } else if (payload.eventType === 'DELETE') {
         if (payload.old && payload.old.id) {
           const idx = state.items.findIndex(i => i.id === payload.old.id);

@@ -1,7 +1,7 @@
 // ============================================
 // SERVICE WORKER - Nossa WatchList PWA
 // ============================================
-const CACHE_NAME = 'watchlist-v2';
+const CACHE_NAME = 'watchlist-v3';
 const APP_SHELL = [
   './',
   './index.html',
